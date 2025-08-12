@@ -1,0 +1,39 @@
+## Register RAGTool with flow agent
+## This flow agent combines the embedding model with the interference model
+## Since we have a linear flow of commands, the embedding model is registered and used first
+## The index that the embedding model searches is re-identified here
+## Next is the actual interference model
+## You can also see the system prompt that is being passed to LMStudio- with the variable to pull context out from the RAGTool
+POST /_plugins/_ml/agents/_register
+{
+  "name": "abuseipdb_KNN_RAG",
+  "type": "flow",
+  "description": "This is an agent using the Production LMStudio host",
+  "tools": [
+    {
+      "type": "VectorDBTool",
+      "parameters": {
+        "model_id": "EBKWKZgB3rgc35q2GLG9",
+        "index": "weblogs_knn",
+        "embedding_field": "log_embedding",
+        "source_field": ["log"],
+        "input": "${parameters.question}"
+      }
+    },
+    {
+      "type": "MLModelTool",
+      "description": "A general tool to answer any question",
+      "parameters": {
+        "model_id": "C4JSeJgBlaNTCsEIMvoi",
+        "response_filter": "$.choices[0].message.content",
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "\n### Instruction:\n You are a professional data analyst. You will always answer questions based on the given context first. If the answer is not directly shown in the context, you will analyze the data and find the answer. If you don't know the answer, just say 'don't know'.  \n\n Context:\n${parameters.VectorDBTool.output}\n\nHuman:${parameters.question}\n### Response:\n"
+          }
+        ],
+        "temperature": 0.5
+      }
+    }
+  ]
+}
